@@ -46,7 +46,7 @@ server {
 	location = /status {
 		content_by_lua_block {
                 	local test = require "lua-resty-etcd.test"
-                        ngx.say(test["handle"]:status())
+             		ngx.say(test["handle"]:status())
                 }
 	}
 	
