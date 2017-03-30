@@ -8,6 +8,7 @@ local ngx_INFO = ngx.INFO
 local ngx_worker_exiting = ngx.worker.exiting
 local ngx_match = ngx.re.match
 local ngx_localtime = ngx.localtime
+local ngx_sleep = ngx.sleep
 
 local _M = {}
 local mt = { __index = _M }
@@ -24,7 +25,11 @@ local function get_allkeys(self,key)
 	local conf = self.conf
 	local c = http:new()
 	c:set_timeout(5000)
-	c:connect(conf.etcd_host,conf.etcd_port)
+	local ok, err = c:connect(conf.etcd_host,conf.etcd_port)
+	if not ok then
+		log_error(err)
+		ngx_sleep(5)
+	end
 	local url
 	if not key then
 		url = "/v2/keys" .. conf.etcd_path 
@@ -41,7 +46,7 @@ local function get_allkeys(self,key)
 					if v.dir then
 						get_allkeys(self,v.key)
 					else
-						self[v.key] = v.value
+						self[v.key] = json.decode(v.value)
 					end
 				end
 			end
@@ -91,7 +96,11 @@ local function watch(premature, self, index)
 	end
     else
 	c:set_timeout(120000)
-    	c:connect(conf.etcd_host, conf.etcd_port)
+    	local ok, err = c:connect(conf.etcd_host, conf.etcd_port)
+	if not ok then
+		log_error(err)
+		ngx_sleep(5)
+	end
         local s_url = url .. "?wait=true&recursive=true&waitIndex=" .. index
         local res, err = c:request({ path = s_url, method = "GET" })
         if not err then
@@ -147,14 +156,16 @@ function _M.init(self)
 end
 
 local function copyTable(t1,t2)
-	local t = t2
-	for k,v in pairs(t1)
-	do
-		if not t[k] then
-			t[k] = v
-		end
-	end
-	return t
+        for k,v in pairs(t1)
+        do
+                if not t2[k] then
+                        t2[k] = v
+		else
+			if type(v) == "table" then
+				copyTable(v,t2[k])
+			end
+                end
+        end
 end
 
 function _M.set_config(self,action,key,value)
@@ -190,7 +201,7 @@ function _M.set_config(self,action,key,value)
 	end
 	local src_value = self[key]
         if method == "PUT" and type(src_value) == "table" then
-                value = copyTable(src_value,value)
+                copyTable(src_value,value)
         end
 	value.time = ngx_localtime() 
 	local etcd_host = conf["etcd_host"]
@@ -208,7 +219,7 @@ function _M.set_config(self,action,key,value)
 				log_error(body)
 				return nil, body
 			else
-				return 1
+				return true
 			end
 		else
 			log_error(err)
