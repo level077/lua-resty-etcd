@@ -1,7 +1,9 @@
-#Description
+Description
+==============
 读取及监听etcd数据，同时将数据放入table中，etcd的key即table的key。如etcd中的key为/waf/blackip/1.1.1.1,则table中的key为t[/waf/black/1.1.1.1]。
 
-#Usage
+Usage
+==============
 再次封装成一个module使用，如
 ```
 local etcd = require "lua-resty-etcd.etcd"
@@ -37,7 +39,8 @@ v.init({
 ```
 然后配置nginx.conf
 ```
-#nginx.conf
+nginx.conf
+====================
 lua_package_path "/path/to/?.lua;;";
 init_worker_by_lua_file "/path/to/init.lua";
 
@@ -66,8 +69,10 @@ server {
 }
 ```
 
-#API
-##new
+API
+=================
+new
+----------------
 ```
 v = etcd:new(conf)
 ```
@@ -76,7 +81,8 @@ conf是一个table，必须的参数为：
 - etcd_port: etcd port
 - etcd_path: 不包含/v2/keys
 
-##init
+init
+------------------
 ```
 local ok, err = v:init()
 if not ok then
@@ -85,7 +91,8 @@ end
 ```
 启动后台ngx.timer.at,读取数据及监听key
 
-##status
+status
+------------------
 ```
 local res, err = v:status()
 if not res then
@@ -95,7 +102,8 @@ return res
 ```
 查看相关etcd数据
 
-##set_config
+set_config
+------------------
 ```
 local res, err = v:set_config(action,key,value)
 if not res then
@@ -107,5 +115,6 @@ end
 - key: etcd的key,不包含/v2/keys
 - value: table类型
 
-#Dependencies
+Dependencies
+-----------------
 - lua-resty-http: https://github.com/pintsized/lua-resty-http.git
